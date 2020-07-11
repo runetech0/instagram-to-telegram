@@ -1,0 +1,6 @@
+conf.py
+tests.py
+.vscode
+__pycache__/
+*.session
+tmp/
