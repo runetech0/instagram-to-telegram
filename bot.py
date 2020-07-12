@@ -27,30 +27,8 @@ api_hash = conf.API_HASH
 target_group = conf.TELEGRAM_GROUP_ID
 session_file = 'telegramBot'
 
-if conf.AUTHENTICATION:
-    sockProxy = {
-        "proxy_type": socks.SOCKS5,
-        "addr": conf.SOCKS5_SERVER,
-        "port": conf.SOCKS5_PORT,
-        "rdns": True,
-        "username": conf.USERNAME,
-        "password": conf.PASSWORD
-    }
 
-
-if conf.PROXY:
-    if conf.AUTHENTICATION:
-        if conf.USERNAME is not None and conf.PASSWORD is not None:
-            telegramClient = TelegramClient('anon', api_id, api_hash, proxy=sockProxy)
-    elif not conf.AUTHENTICATION:
-        print(f'Using proxy server {conf.SOCKS5_SERVER}:{conf.SOCKS5_PORT}')
-        telegramClient = TelegramClient('anon', api_id, api_hash, proxy=(
-            socks.SOCKS5, conf.SOCKS5_SERVER, conf.SOCKS5_PORT))
-else:
-    telegramClient = TelegramClient('anon', api_id, api_hash)
-
-
-# telegramClient = TelegramClient(session_file, api_id, api_hash)
+telegramClient = TelegramClient(session_file, api_id, api_hash)
 
 # ##############################################< Helper functions >##############################################
 
