@@ -4,7 +4,6 @@ from telethon import TelegramClient, errors
 from datetime import datetime as dt
 import datetime
 import time
-import socks
 import os
 import requests
 
