@@ -4,7 +4,6 @@ from telethon import TelegramClient, errors
 from datetime import datetime as dt
 import datetime
 import time
-import pprint
 import socks
 import os
 import requests
@@ -19,12 +18,14 @@ target_username = conf.TARGET_USERNAME
 
 instaClient = Client(user_name, password)
 
+feedWaitTime = 590
+
 # ##############################################< Telegram Client Setup >##############################################
 
 api_id = conf.API_ID
 api_hash = conf.API_HASH
 target_group = conf.TELEGRAM_GROUP_ID
-
+session_file = 'telegramBot'
 
 if conf.AUTHENTICATION:
     sockProxy = {
@@ -49,10 +50,13 @@ else:
     telegramClient = TelegramClient('anon', api_id, api_hash)
 
 
+# telegramClient = TelegramClient(session_file, api_id, api_hash)
+
 # ##############################################< Helper functions >##############################################
 
-def createTimestamp(mins=0, hours=0, days=0):
-    now = dt.now() - datetime.timedelta(minutes=mins, hours=hours, days=days)
+
+def createTimestamp(sec=0, mins=0, hours=0, days=0):
+    now = dt.now() - datetime.timedelta(seconds=sec, minutes=mins, hours=hours, days=days)
     ttuple = now.timetuple()
     timestamp = time.mktime(ttuple)
     return int(timestamp)
@@ -93,7 +97,7 @@ def main():
 
         while True:
             print('[+] Getting instagram feeds....')
-            userfeed = instaClient.username_feed(target_username, min_timestamp=createTimestamp(days=3))
+            userfeed = instaClient.username_feed(target_username, min_timestamp=createTimestamp(sec=feedWaitTime+10))
             listOfItems = userfeed['items']
             if listOfItems:
                 print('[+] New Instagram feeds found...\n[+] Sending feeds to telegram group...')
@@ -112,8 +116,8 @@ def main():
                 print('[+] Sent all feeds to instagram group...')
             else:
                 print('[+] No new feeds found...')
-            print('[+] Sleeping for 10 minutes before checking the feed again...')
-            time.sleep(590)
+            print(f'[+] Waiting for {feedWaitTime} Seconds before checking the feed again...')
+            time.sleep(feedWaitTime)
     except KeyboardInterrupt:
         print('[+] Quiting bot... Please wait...')
 
