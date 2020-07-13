@@ -4,3 +4,4 @@ tests.py
 __pycache__/
 *.session
 tmp/
+conf.ini

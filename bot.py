@@ -1,20 +1,23 @@
-import conf
+from configparser import ConfigParser
+import requests
+import os
+import socks
+import time
 from instagram_private_api import Client
 from telethon import TelegramClient, errors
 from datetime import datetime as dt
 import datetime
-import time
-import socks
-import os
-import requests
 
+
+config = ConfigParser()
+config.read('conf.ini')
 
 # ##############################################< Instagram API setup >##############################################
 
-user_name = conf.INSTA_USERNAME
-password = conf.INSTA_PASSWORD
+user_name = config['INSTAGRAM']['username']
+password = config['INSTAGRAM']['password']
 
-target_username = conf.TARGET_USERNAME
+target_username = config['INSTAGRAM']['target_username']
 
 instaClient = Client(user_name, password)
 
@@ -22,30 +25,34 @@ feedWaitTime = 590
 
 # ##############################################< Telegram Client Setup >##############################################
 
-api_id = conf.API_ID
-api_hash = conf.API_HASH
-target_group = conf.TELEGRAM_GROUP_ID
+api_id = config['TELEGRAM']['api_id']
+api_hash = config['TELEGRAM']['api_hash']
+target_group = config['TELEGRAM']['telegram_destination_group_id']
 session_file = 'telegramBot'
 
-if conf.AUTHENTICATION:
-    sockProxy = {
-        "proxy_type": socks.SOCKS5,
-        "addr": conf.SOCKS5_SERVER,
-        "port": conf.SOCKS5_PORT,
-        "rdns": True,
-        "username": conf.USERNAME,
-        "password": conf.PASSWORD
-    }
+
+# ##############################################< Proxy >##############################################
+
+proxy_enabled = config['PROXY'].getboolean('enable')
+proxy_server = config['PROXY']['server'].encode()
+proxy_port = config['PROXY'].getint('port')
 
 
-if conf.PROXY:
-    if conf.AUTHENTICATION:
-        if conf.USERNAME is not None and conf.PASSWORD is not None:
-            telegramClient = TelegramClient('anon', api_id, api_hash, proxy=sockProxy)
-    elif not conf.AUTHENTICATION:
-        print(f'Using proxy server {conf.SOCKS5_SERVER}:{conf.SOCKS5_PORT}')
-        telegramClient = TelegramClient('anon', api_id, api_hash, proxy=(
-            socks.SOCKS5, conf.SOCKS5_SERVER, conf.SOCKS5_PORT))
+# if config['proxy']['enable']:
+#     sockProxy = {
+#         "proxy_type": socks.SOCKS5,
+#         "addr": conf.SOCKS5_SERVER,
+#         "port": conf.SOCKS5_PORT,
+#         "rdns": True,
+#         "username": conf.USERNAME,
+#         "password": conf.PASSWORD
+#     }
+
+
+if proxy_enabled:
+    print(f'Using proxy server {proxy_server}:{proxy_port}')
+    telegramClient = TelegramClient(session_file, api_id, api_hash, proxy=(
+        socks.SOCKS5, proxy_server, proxy_port))
 else:
     telegramClient = TelegramClient('anon', api_id, api_hash)
 

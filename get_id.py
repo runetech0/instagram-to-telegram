@@ -2,36 +2,54 @@
 from telethon import TelegramClient, events, errors
 import logging
 import socks
-import conf
+from configparser import ConfigParser
 logging.basicConfig(format='[%(levelname) 5s/%(asctime)s] %(name)s: %(message)s',
                     level=logging.WARNING)
 
 
-api_id = conf.API_ID
-api_hash = conf.API_HASH
+config = ConfigParser()
+config.read('conf.ini')
 
 
-if conf.AUTHENTICATION:
-    sockProxy = {
-        "proxy_type": socks.SOCKS5,
-        "addr": conf.SOCKS5_SERVER,
-        "port": conf.SOCKS5_PORT,
-        "rdns": True,
-        "username": conf.USERNAME,
-        "password": conf.PASSWORD
-    }
+api_id = config['TELEGRAM']['api_id']
+api_hash = config['TELEGRAM']['api_hash']
+session_file = 'telegramBot'
 
-if conf.PROXY:
-    if conf.AUTHENTICATION:
-        if conf.USERNAME is not None and conf.PASSWORD is not None:
-            client = TelegramClient('anon', api_id, api_hash, proxy=sockProxy)
-            print(f"[+] Proxy enabled with authentication\n[+] Proxy Server: {conf.SOCKS5_SERVER}:{conf.SOCKS5_PORT}")
-    elif not conf.AUTHENTICATION:
-        client = TelegramClient('anon', api_id, api_hash, proxy=(socks.SOCKS5, conf.SOCKS5_SERVER, conf.SOCKS5_PORT))
-        print(f"[+] Proxy enabled without authentication\n[+] Proxy Server: {conf.SOCKS5_SERVER}:{conf.SOCKS5_PORT}")
+
+proxy_enabled = config['PROXY'].getboolean('enable')
+proxy_server = config['PROXY']['server'].encode()
+proxy_port = config['PROXY'].getint('port')
+
+
+if proxy_enabled:
+    print(f'Using proxy server {proxy_server}:{proxy_port}')
+    telegramClient = TelegramClient(session_file, api_id, api_hash, proxy=(
+        socks.SOCKS5, proxy_server, proxy_port))
 else:
-    print("[+] Proxy disabled")
-    client = TelegramClient('anon', api_id, api_hash)
+    telegramClient = TelegramClient('anon', api_id, api_hash)
+
+
+# if conf.AUTHENTICATION:
+#     sockProxy = {
+#         "proxy_type": socks.SOCKS5,
+#         "addr": conf.SOCKS5_SERVER,
+#         "port": conf.SOCKS5_PORT,
+#         "rdns": True,
+#         "username": conf.USERNAME,
+#         "password": conf.PASSWORD
+#     }
+
+# if conf.PROXY:
+#     if conf.AUTHENTICATION:
+#         if conf.USERNAME is not None and conf.PASSWORD is not None:
+#             client = TelegramClient('anon', api_id, api_hash, proxy=sockProxy)
+#             print(f"[+] Proxy enabled with authentication\n[+] Proxy Server: {conf.SOCKS5_SERVER}:{conf.SOCKS5_PORT}")
+#     elif not conf.AUTHENTICATION:
+#         client = TelegramClient('anon', api_id, api_hash, proxy=(socks.SOCKS5, conf.SOCKS5_SERVER, conf.SOCKS5_PORT))
+#         print(f"[+] Proxy enabled without authentication\n[+] Proxy Server: {conf.SOCKS5_SERVER}:{conf.SOCKS5_PORT}")
+# else:
+#     print("[+] Proxy disabled")
+#     client = TelegramClient('anon', api_id, api_hash)
 
 
 try:
@@ -54,14 +72,14 @@ except KeyboardInterrupt:
     quit()
 
 
-@client.on(events.NewMessage())
+@telegramClient.on(events.NewMessage())
 async def newMessageHandler(msg):
     if public:
         try:
             if msg.fwd_from.channel_id:
                 print("-------------------------------------------------------------")
-                print("[+] Forwarded message is: {msg.raw_text}")
-                print("\n[+] Chat id for public channel is: {msg.fwd_from.channel_id}\n")
+                print(f"[+] Forwarded message is: {msg.raw_text}")
+                print(f"\n[+] Chat id for public channel is: {msg.fwd_from.channel_id}\n")
                 print("-------------------------------------------------------------\n")
         except AttributeError:
             pass
@@ -69,17 +87,17 @@ async def newMessageHandler(msg):
         try:
             if msg.chat_id:
                 print("---------------------------------------------------")
-                print("[+] Sent message is: {msg.raw_text}")
-                print("\n[+] The chat id for the channel is: {msg.chat_id}")
+                print(f"[+] Sent message is: {msg.raw_text}")
+                print(f"[+] The chat id for the channel is: {msg.chat_id}")
                 print("--------------------------------------------------\n")
         except AttributeError:
             pass
 
 
 try:
-    client.start()
+    telegramClient.start()
     print(guideMsg)
-    client.run_until_disconnected()
+    telegramClient.run_until_disconnected()
 except errors.rpcerrorlist.ApiIdInvalidError:
     print("Invalid API_ID/API_HASH")
 except KeyboardInterrupt:

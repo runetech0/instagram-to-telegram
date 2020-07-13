@@ -1,7 +1,4 @@
 instagram_private_api
-datetime
-time
 socks
 telethon
-os
 requests
