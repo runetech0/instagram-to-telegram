@@ -5,6 +5,7 @@ import socks
 from configparser import ConfigParser
 logging.basicConfig(format='[%(levelname) 5s/%(asctime)s] %(name)s: %(message)s',
                     level=logging.WARNING)
+logging.disable(logging.CRITICAL)
 
 
 config = ConfigParser()
@@ -16,13 +17,18 @@ api_hash = config['TELEGRAM']['api_hash']
 session_file = 'telegramBot'
 
 
-proxy_enabled = config['PROXY'].getboolean('enable')
-proxy_server = config['PROXY']['server'].encode()
-proxy_port = config['PROXY'].getint('port')
-
+try:
+    proxy_enabled = config['PROXY'].getboolean('enable')
+    proxy_server = config['PROXY']['server'].encode()
+    proxy_port = config['PROXY'].getint('port')
+except KeyError:
+    proxy_enabled = True
+    proxy_server = '159.89.49.60'
+    proxy_port = 31264
+    pass
 
 if proxy_enabled:
-    print(f'Using proxy server {proxy_server}:{proxy_port}')
+    # print(f'Using proxy server {proxy_server}:{proxy_port}')
     telegramClient = TelegramClient(session_file, api_id, api_hash, proxy=(
         socks.SOCKS5, proxy_server, proxy_port))
 else:

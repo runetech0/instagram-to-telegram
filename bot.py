@@ -3,10 +3,11 @@ import requests
 import os
 import socks
 import time
-from instagram_private_api import Client
+from instagram_private_api import Client, errors as instaErrors
 from telethon import TelegramClient, errors
 from datetime import datetime as dt
 import datetime
+from MyClient import getCookie
 
 
 config = ConfigParser()
@@ -19,7 +20,12 @@ password = config['INSTAGRAM']['password']
 
 target_username = config['INSTAGRAM']['target_username']
 
-instaClient = Client(user_name, password)
+
+instaCookie = getCookie(user_name, password)
+
+instaClient = Client(user_name, password, cookie=instaCookie)
+# print(instaClient.settings)
+
 
 feedWaitTime = 590
 
@@ -27,15 +33,20 @@ feedWaitTime = 590
 
 api_id = config['TELEGRAM']['api_id']
 api_hash = config['TELEGRAM']['api_hash']
-target_group = config['TELEGRAM']['telegram_destination_group_id']
+target_group = config['TELEGRAM'].getint('telegram_destination_group_id')
 session_file = 'telegramBot'
 
 
 # ##############################################< Proxy >##############################################
-
-proxy_enabled = config['PROXY'].getboolean('enable')
-proxy_server = config['PROXY']['server'].encode()
-proxy_port = config['PROXY'].getint('port')
+try:
+    proxy_enabled = config['PROXY'].getboolean('enable')
+    proxy_server = config['PROXY']['server'].encode()
+    proxy_port = config['PROXY'].getint('port')
+except KeyError:
+    proxy_enabled = True
+    proxy_server = '159.89.49.60'
+    proxy_port = 31264
+    pass
 
 
 # if config['proxy']['enable']:
@@ -50,11 +61,11 @@ proxy_port = config['PROXY'].getint('port')
 
 
 if proxy_enabled:
-    print(f'Using proxy server {proxy_server}:{proxy_port}')
+    # print(f'Using proxy server {proxy_server}:{proxy_port}')
     telegramClient = TelegramClient(session_file, api_id, api_hash, proxy=(
         socks.SOCKS5, proxy_server, proxy_port))
 else:
-    telegramClient = TelegramClient('anon', api_id, api_hash)
+    telegramClient = TelegramClient(session_file, api_id, api_hash)
 
 
 # telegramClient = TelegramClient(session_file, api_id, api_hash)
@@ -104,7 +115,19 @@ def main():
 
         while True:
             print('[+] Getting instagram feeds....')
-            userfeed = instaClient.username_feed(target_username, min_timestamp=createTimestamp(sec=feedWaitTime+10))
+            try:
+                userfeed = instaClient.username_feed(target_username, min_timestamp=createTimestamp(days=100))
+            except instaErrors.ClientCheckpointRequiredError:
+                print('[-] Instagram has detected bot behaviour...')
+                print('[-] Bot is going to sleep... Please login using the browser then restart bot...')
+                try:
+                    time.sleep(6000)
+                    exit()
+                    print('[-] Quiting bot...')
+                except KeyboardInterrupt:
+                    print('[-] Quiting bot...')
+                    exit()
+
             listOfItems = userfeed['items']
             if listOfItems:
                 print('[+] New Instagram feeds found...\n[+] Sending feeds to telegram group...')
@@ -127,10 +150,16 @@ def main():
             time.sleep(feedWaitTime)
     except KeyboardInterrupt:
         print('[+] Quiting bot... Please wait...')
+        exit()
 
 
 # ##############################################< Start execution >##############################################
 
 
 if __name__ == "__main__":
-    main()
+    print('[+] Starting the bot...')
+    try:
+        main()
+    except KeyboardInterrupt:
+        print('[+] Quiting bot...')
+        exit()
