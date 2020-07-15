@@ -17,17 +17,11 @@ config.read('conf.ini')
 
 user_name = config['INSTAGRAM']['username']
 password = config['INSTAGRAM']['password']
-
 target_username = config['INSTAGRAM']['target_username']
-
+feedWaitTime = config['INSTAGRAM'].getint('feedWaitTime')
 
 instaCookie = getCookie(user_name, password)
-
 instaClient = Client(user_name, password, cookie=instaCookie)
-# print(instaClient.settings)
-
-
-feedWaitTime = 590
 
 # ##############################################< Telegram Client Setup >##############################################
 
@@ -90,17 +84,21 @@ def downloadImg(url):
     return './tmp/file.jpg'
 
 
-def sendItem(filePath):
-    telegramClient.loop.run_until_complete(telegramClient.send_message(target_group, file=filePath))
-    if os.path.exists(filePath):
-        os.remove(filePath)
+def sendItem(filePath, text=None):
+    try:
+        telegramClient.loop.run_until_complete(telegramClient.send_message(target_group, text, file=filePath))
+        if os.path.exists(filePath):
+            os.remove(filePath)
+        return True
+    except errors.rpcerrorlist.ChatIdInvalidError:
+        print('[-] Invalid Target id...')
+        return False
 
 # ##############################################< Main function >##############################################
 
 
 def main():
     try:
-
         try:
             print('[+] Starting the telegram client...')
             telegramClient.start()
@@ -116,34 +114,47 @@ def main():
         while True:
             print('[+] Getting instagram feeds....')
             try:
-                userfeed = instaClient.username_feed(target_username, min_timestamp=createTimestamp(days=100))
+                userfeed = instaClient.username_feed(target_username, min_timestamp=createTimestamp(sec=feedWaitTime+5))
             except instaErrors.ClientCheckpointRequiredError:
                 print('[-] Instagram has detected bot behaviour...')
                 print('[-] Bot is going to sleep... Please login using the browser then restart bot...')
                 try:
                     time.sleep(6000)
-                    exit()
                     print('[-] Quiting bot...')
+                    exit()
                 except KeyboardInterrupt:
                     print('[-] Quiting bot...')
+                    time.sleep(1)
                     exit()
 
             listOfItems = userfeed['items']
             if listOfItems:
                 print('[+] New Instagram feeds found...\n[+] Sending feeds to telegram group...')
                 for item in listOfItems:
+                    if item['caption']:
+                        text = item['caption']['text']
+                    else:
+                        text = None
                     # Item type will be 1 for image and 2 for video.
                     itemType = item['media_type']
                     if itemType == 1:
                         itemUrl = item['image_versions2']['candidates'][0]['url']
                         imgPath = downloadImg(itemUrl)
-                        sendItem(imgPath)
-                        continue
+                        sent = sendItem(imgPath, text=text)
+                        if sent:
+                            print('[+] Feed sent...')
+                            continue
+                        print('[-] Feed not sent...  Please quit the bot...')
+                        break
                     if itemType == 2:
                         itemUrl = item['video_versions'][0]['url']
-                        sendItem(itemUrl)
-                        continue
-                print('[+] Sent all feeds to instagram group...')
+                        sent = sendItem(itemUrl)
+                        if sent:
+                            print('[+] Feed sent...')
+                            continue
+                        print('[-] Feed not sent...  Please quit the bot...')
+                        break
+                # print('[+] Sent all feeds to instagram group...')
             else:
                 print('[+] No new feeds found...')
             print(f'[+] Waiting for {feedWaitTime} Seconds before checking the feed again...')

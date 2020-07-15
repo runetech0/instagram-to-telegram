@@ -22,7 +22,7 @@ try:
     proxy_server = config['PROXY']['server'].encode()
     proxy_port = config['PROXY'].getint('port')
 except KeyError:
-    proxy_enabled = True
+    proxy_enabled = False
     proxy_server = '159.89.49.60'
     proxy_port = 31264
     pass
@@ -105,6 +105,6 @@ try:
     print(guideMsg)
     telegramClient.run_until_disconnected()
 except errors.rpcerrorlist.ApiIdInvalidError:
-    print("Invalid API_ID/API_HASH")
+    print("[-] Invalid API_ID/API_HASH")
 except KeyboardInterrupt:
-    print("\nQuiting ...")
+    print("\n[+] Quiting ...")
